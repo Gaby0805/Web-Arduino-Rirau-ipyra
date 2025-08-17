@@ -1,10 +1,11 @@
+import { ButtonHTMLAttributes } from "react";
 
-interface DefaultButtonProps  {
+interface DefaultButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     Name: string;
     className?: string;
 }
 
-export default function DefaultButton({
+export default function DefaultButton ({
   Name,
     className = "",
   ...rest

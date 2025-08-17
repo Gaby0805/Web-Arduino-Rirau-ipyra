@@ -1,5 +1,4 @@
-
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -7,21 +6,25 @@ import {
   TableHeader,
   TableRow,
   TableCell,
-} from "@/components/ui/table"
-import { Switch } from "@/components/ui/switch"
-import { Alarm } from "./types"
+  TableHead as TableHeadCell,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Alarm } from "./types";
+import {deleteAlarm} from "../func/alarm";
+import { toast } from "sonner";
 
 interface AlarmTableProps {
   data: Alarm[];
   onToggle: (id: string, value: boolean) => void;
-  onSelect?: (alarm: Alarm) => void; 
-  rowsPerPage?: number; // opcional, padrão 5
+  onSelect?: (alarm: Alarm) => void;
+  onDelete?: (ids: number[]) => void; // <--- adicionado
+  rowsPerPage?: number;
 }
-
 export default function Tablearea({
   data,
   onToggle,
   onSelect,
+  onDelete,
   rowsPerPage = 10,
 }: AlarmTableProps) {
   const dictday: Record<number, string> = {
@@ -31,57 +34,114 @@ export default function Tablearea({
     3: "Quarta-feira",
     4: "Quinta-feira",
     5: "Sexta-feira",
-    6: "Sábado"
-  }
+    6: "Sábado",
+  };
 
-  const [dayFilter, setDayFilter] = useState<string>("")
-  const [periodFilter, setPeriodFilter] = useState<string>("")
-  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [dayFilter, setDayFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // filtro pra se é de manhã ou tarde
+const clickdelete = () => {
+    if (confirm("certeza?") && onDelete) {
+      const idsToDelete = Array.from(selectedIds).map((key) =>
+        Number(key.split("-")[0])
+      );
+      onDelete(idsToDelete);
+      deleteAlarm(idsToDelete)
+      setSelectedIds(new Set()); // limpa seleção
+    }
+
+};
+
   const getPeriod = (horario: string) => {
-    const [hour, minute] = horario.split(":").map(Number)
-    if (hour < 12 || (hour === 12 && minute <= 30)) return "manha"
-    return "tarde"
-  }
+    const [hour, minute] = horario.split(":").map(Number);
+    if (hour < 12 || (hour === 12 && minute <= 30)) return "manha";
+    return "tarde";
+  };
+console.log(selectedIds)
+  // 1. Expande primeiro
+  const expandedData = data.flatMap((alarm) =>
+    alarm.dia.map((day) => ({ ...alarm, day }))
+  );
 
-  const filteredData = data.filter(alarm => {
-    const matchDay = dayFilter ? String(alarm.dia) === dayFilter : true
-    const matchPeriod = periodFilter ? getPeriod(alarm.horario) === periodFilter : true
-    return matchDay && matchPeriod
-  })
+  // 2. Filtra
+  const filteredData = expandedData.filter((alarm) => {
+    const matchDay = dayFilter
+      ? alarm.day === Number(dayFilter)
+      : true;
+    const matchPeriod = periodFilter
+      ? getPeriod(alarm.horario) === periodFilter
+      : true;
+    return matchDay && matchPeriod;
+  });
 
-  // paginação
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage)
+  // 3. Paginação
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
-  )
+  );
   useEffect(() => {
-  if (currentPage > totalPages) {
-    setCurrentPage(totalPages || 1) // se não houver páginas, volta para 1
-  }
-}, [totalPages, currentPage])
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages || 1);
+    }
+  }, [totalPages, currentPage]);
 
-  const handlePrev = () => setCurrentPage(prev => Math.max(prev - 1, 1))
-  const handleNext = () => setCurrentPage(prev => Math.min(prev + 1, totalPages))
-  const handlePageChange = (page: number) => setCurrentPage(page)
+  const handlePrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNext = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  const handlePageChange = (page: number) => setCurrentPage(page);
+
+  // Alterna seleção da linha
+  const toggleSelect = (alarm: Alarm & { day: number }) => {
+    const key = `${alarm.id}-${alarm.day}`;
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      newSelected.add(key);
+    }
+    setSelectedIds(newSelected);
+    onSelect?.(alarm);
+  };
+  
+  async function handleToggle(id: number, value: boolean) {
+  // Atualiza UI imediatamente
+  setAlarms((prev) =>
+    prev.map((a) => (a.id === id ? { ...a, is_active: value } : a))
+  );
+
+  // Envia para o backend
+  try {
+    await updateStatus(id, value);
+  } catch (error) {
+    console.error("Erro ao atualizar status:", error);
+    // Reverte o toggle em caso de erro
+    setAlarms((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, is_active: !value } : a))
+    );
+    toast("Erro ao atualizar status");
+  }
+}
 
   return (
     <div className="space-y-4">
       {/* filtros */}
       <div className="flex gap-4">
-        <select 
+        <select
           className="border p-2 rounded bg-seconderyGray"
           value={dayFilter}
           onChange={(e) => {
-            setDayFilter(e.target.value)
-            setCurrentPage(1) // reset página ao filtrar
+            setDayFilter(e.target.value);
+            setCurrentPage(1);
           }}
         >
           <option value="">Todos os dias</option>
           {Object.entries(dictday).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
+            <option key={key} value={key}>
+              {label}
+            </option>
           ))}
         </select>
 
@@ -89,45 +149,58 @@ export default function Tablearea({
           className="border p-2 rounded bg-seconderyGray"
           value={periodFilter}
           onChange={(e) => {
-            setPeriodFilter(e.target.value)
-            setCurrentPage(1)
+            setPeriodFilter(e.target.value);
+            setCurrentPage(1);
           }}
         >
           <option value="">Todos os períodos</option>
           <option value="manha">Manhã</option>
           <option value="tarde">Tarde</option>
         </select>
+
+        <button
+          className="border p-2 rounded bg-seconderyGray cursor-pointer"
+          onClick={() => clickdelete()}
+        >
+          Limpar seleção
+        </button>
       </div>
 
       {/* tabela */}
       <Table className="border rounded-4xl">
         <TableHeader>
           <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Horário</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="flex justify-center items-center">Dia da semana</TableHead>
+            <TableHeadCell>Nome</TableHeadCell>
+            <TableHeadCell>Horário</TableHeadCell>
+            <TableHeadCell>Status</TableHeadCell>
+            <TableHeadCell className="flex justify-center items-center">
+              Dia da semana
+            </TableHeadCell>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {paginatedData.map((alarm) => (
             <TableRow
-              key={alarm.id}
-              className="cursor-pointer hover:bg-seconderyGray"
-              onClick={() => onSelect?.(alarm)}
+              key={`${alarm.id}-${alarm.day}`}
+              className={`cursor-pointer ${
+                selectedIds.has(`${alarm.id}-${alarm.day}`)
+                  ? "bg-gray-900"
+                  : "hover:bg-seconderyGray"
+              }`}
+              onClick={() => toggleSelect(alarm)}
             >
-              <TableCell className="font-medium">{alarm.nome}</TableCell>
+              <TableCell className="font-medium">{alarm.label}</TableCell>
               <TableCell>{alarm.horario}</TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <Switch
-                  checked={alarm.ativo}
+                  checked={alarm.is_active}
                   onCheckedChange={(checked) => onToggle(alarm.id, checked)}
-                  aria-label={`Ativar/desativar ${alarm.nome}`}
+                  aria-label={`Ativar/desativar ${alarm.label}`}
                 />
               </TableCell>
               <TableCell className="flex justify-center items-center">
-                {dictday[alarm.dia]}
+                {dictday[alarm.day]}
               </TableCell>
             </TableRow>
           ))}
@@ -145,11 +218,13 @@ export default function Tablearea({
             Anterior
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
             <button
               key={page}
               className={`px-3 py-1 border rounded ${
-                page === currentPage ? "bg-primary text-white" : "bg-seconderyGray"
+                page === currentPage
+                  ? "bg-primary text-white"
+                  : "bg-seconderyGray"
               }`}
               onClick={() => handlePageChange(page)}
             >
@@ -167,5 +242,5 @@ export default function Tablearea({
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,36 +1,87 @@
 'use client'
 
-// Exemplo de uso
-import { useState } from "react";
-import { Alarm } from "./components/types";
+import { useState, useEffect } from "react";
 import Tablearea from "./components/table";
+import type { Alarm } from "./components/types";
+import { toast } from "sonner";
+import { updateStatus, deleteAlarm } from "./func/alarm";
+import api from "@/app/src/api";
 
-export default function Dashboard() {
-  const [alarms, setAlarms] = useState<Alarm[]>([
-    { id: "1", nome: "INV001", horario: "08:00", ativo: true, dia: 0 },
-    { id: "2", nome: "INV002", horario: "10:30", ativo: false, dia: 1},
-    { id: "3", nome: "INV002", horario: "10:30", ativo: false, dia: 2},
-    { id: "4", nome: "INV002", horario: "15:30", ativo: false, dia: 3},
-    { id: "14", nome: "INV002", horario: "10:30", ativo: false, dia: 4},
-    { id: "16", nome: "INV002", horario: "10:30", ativo: false, dia: 4},
-    { id: "214", nome: "INV002", horario: "10:30", ativo: false, dia: 4},
-    { id: "643", nome: "INV002", horario: "10:30", ativo: false, dia: 4},
-    { id: "65", nome: "INV002", horario: "10:30", ativo: false, dia: 4},
-    { id: "512", nome: "INV002", horario: "10:30", ativo: false, dia: 5},
-    { id: "7", nome: "INV002", horario: "10:30", ativo: false, dia: 6},
-  ]);
+// Formato que a API retorna
+type AlarmApi = {
+  id: number;
+  label: string;
+  time: string;        // ex: "07:00:00.372000"
+  is_active: boolean;
+  days: number[];      // ex: [0,1]
+  user_id: number;
+};
 
-  function handleToggle(id: string, value: boolean) {
+export default function SecondArea() {
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
+
+  // Buscar alarmes do backend
+  const fetchAlarms = async () => {
+    try {
+      const { data } = await api.get<AlarmApi[]>("/alarms");
+      const mapped: Alarm[] = (Array.isArray(data) ? data : []).map((a) => ({
+        id: a.id,
+        label: a.label,
+        horario: a.time?.slice(0, 5) ?? "", // "HH:mm"
+        is_active: a.is_active,
+        dia: a.days ?? [],
+      }));
+      setAlarms(mapped);
+    } catch (error) {
+      console.error("Erro ao buscar alarme", error);
+      toast("Erro ao buscar alarmes");
+    }
+  };
+
+  useEffect(() => {
+    fetchAlarms();
+  }, []);
+
+  // Atualiza status do alarme
+  const handleToggle = async (id: number, value: boolean) => {
+    // Atualiza UI imediatamente
     setAlarms((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ativo: value } : a))
+      prev.map((a) => (a.id === id ? { ...a, is_active: value } : a))
     );
-  }
 
-  return(
+    // Envia para backend
+    try {
+      await updateStatus(id, value);
+      toast("Status atualizado com sucesso");
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      // Reverte toggle em caso de erro
+      setAlarms((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_active: !value } : a))
+      );
+      toast("Erro ao atualizar status");
+    }
+  };
 
-      <div className=" flex flex-col justify-center">
-      <Tablearea data={alarms} onToggle={handleToggle} />
+  // Deletar alarmes selecionados
+  const handleDelete = async (ids: number[]) => {
+    try {
+      await deleteAlarm(ids);
+      fetchAlarms();
+      toast("Alarmes deletados com sucesso");
+    } catch (error) {
+      console.error("Erro ao deletar alarmes:", error);
+      toast("Erro ao deletar alarmes");
+    }
+  };
 
-  </div>
-)
+  return (
+    <div className="flex flex-col justify-center">
+      <Tablearea
+        data={alarms}
+        onToggle={handleToggle}
+        onDelete={handleDelete}
+      />
+    </div>
+  );
 }

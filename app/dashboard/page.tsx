@@ -1,22 +1,32 @@
+'use client'
+import { useRouter } from "next/navigation";
 import LogoSesi from "../components/common/LogoSesi";
 import FirstArea from "../components/dashboard/Firstcol";
 import SecondArea from "../components/dashboard/Secondcol";
 import Thirdarea from "../components/dashboard/thirdcol";
+import { useEffect } from "react";
+import Cookies from "js-cookie";
 
 export default function Dashboard() {
+
+    const router = useRouter();
+
+  useEffect(() => {
+    const token = Cookies.get("token");
+    if (!token) {
+      router.push("/"); // redireciona para login se não tiver token
+    }
+  }, []);
+
+
+
   return (
     <div className="" >
        
        <div className="w-full grid grid-cols-2">
-        <div className="">
-            <LogoSesi height={150} width={150}/>
-        </div>
-        <div className="flex justify-end mr-6 mt-2">
-          <div className="w-24 h-24 bg-seconderyGray rounded-full ">
-
+          <div className="">
+              <LogoSesi height={150} width={150}/>
           </div>
-
-        </div>
 
        </div>
 
