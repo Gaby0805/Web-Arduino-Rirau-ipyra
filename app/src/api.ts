@@ -1,20 +1,15 @@
 import axios from "axios";
-import Cookies from "js-cookie";  // ✅ importar js-cookie
-import dotenv from "dotenv";
-dotenv.config();
+import Cookies from "js-cookie";
 
 const api = axios.create({
-  baseURL: process.env.ROUTE ,
-  withCredentials: true, // envia cookies automaticamente
+  baseURL: process.env.NEXT_PUBLIC_ROUTE,
+  withCredentials: true,
 });
 
-// Interceptor para enviar token via Authorization header
 api.interceptors.request.use(
   (config) => {
-    const token = Cookies.get("token"); // ou use cookies
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    const token = Cookies.get("token");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)
