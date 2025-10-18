@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "optionalDependencies": {
     "lightningcss-darwin-x64": "^1.30.1"

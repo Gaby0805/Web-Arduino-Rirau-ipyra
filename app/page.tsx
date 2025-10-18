@@ -15,10 +15,6 @@ export default function Home() {
   const [password, setPassword] = useState<string>("");
   const router = useRouter();
 
-  useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) router.push("/dashboard");
-  }, [router]);
 
   const loginform = async (username: string, password: string) => {
     try {

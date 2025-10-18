@@ -6,19 +6,13 @@ import LogoSesi from "../components/common/LogoSesi";
 import FirstArea from "../components/dashboard/Firstcol";
 import SecondArea from "../components/dashboard/Secondcol";
 import Thirdarea from "../components/dashboard/thirdcol";
-import { useEffect } from "react";
-import Cookies from "js-cookie";
+
 
 export default function Dashboard() {
 
     const router = useRouter();
 
-  useEffect(() => {
-    const token = Cookies.get("token");
-    if (!token) {
-      router.push("/"); // redireciona para login se não tiver token
-    }
-  }, []);
+
 
 
 
