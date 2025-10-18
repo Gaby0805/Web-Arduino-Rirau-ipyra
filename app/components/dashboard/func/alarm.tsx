@@ -1,6 +1,6 @@
+
 import api from "@/app/src/api"
 import { toast } from "sonner"
-
 async function deleteAlarm(id: number) {
   try {
     await api.delete(`/alarms/${id}`) // Combina com o endpoint do FastAPI

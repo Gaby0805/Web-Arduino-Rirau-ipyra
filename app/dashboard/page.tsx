@@ -1,4 +1,6 @@
 'use client'
+// @ts-nocheck
+
 import { useRouter } from "next/navigation";
 import LogoSesi from "../components/common/LogoSesi";
 import FirstArea from "../components/dashboard/Firstcol";

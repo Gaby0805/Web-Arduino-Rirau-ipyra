@@ -1,7 +1,7 @@
-export interface Alarm {
-  id: string;
+export type Alarm = {
+  id: number;
   nome: string;
   horario: string;
-  dia: number;
   ativo: boolean;
-}
+  dia: number[]; // array de dias da semana (0-6)
+};

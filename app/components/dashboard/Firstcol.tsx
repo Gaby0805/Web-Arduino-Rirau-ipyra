@@ -1,3 +1,4 @@
+
 import DefaultButton from "../common/DefaultButton";
 
 export default function FirstArea() {
