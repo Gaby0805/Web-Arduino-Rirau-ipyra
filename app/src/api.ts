@@ -1,8 +1,10 @@
 import axios from "axios";
 import Cookies from "js-cookie";  // ✅ importar js-cookie
+import dotenv from "dotenv";
+dotenv.config();
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: process.env.ROUTE ,
   withCredentials: true, // envia cookies automaticamente
 });
 
